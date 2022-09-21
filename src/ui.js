@@ -25,12 +25,11 @@ export default class Ui {
             uploaderContainer: make('div', [this.CSS.uploaderContainer]),
             imageContainer: make('div', [this.CSS.imageContainer]),
             fileButton: this.createFileButton(),
-            // imageEl: undefined,
+            // imageElement: undefined,
             imagePreloader: make('div', this.CSS.imagePreloader),
             // caption: make('div', [this.CSS.input, this.CSS.caption], { contentEditable: !this.readOnly, }),
         };
 
-        this.nodes.imageContainer.appendChild(this.nodes.imagePreloader);
         this.nodes.uploaderContainer.appendChild(this.nodes.imageContainer);
         this.nodes.uploaderContainer.appendChild(this.nodes.fileButton);
 
@@ -59,7 +58,8 @@ export default class Ui {
             imageContainer: 'image-list-tool__image',
             imageRemoveButton: 'image-list-tool__image__remove-button',
             imagePreloader: 'image-list-tool__image-preloader',
-            imageEl: 'image-list-tool__image-picture',
+            imageElementContainer: 'image-list-tool__image-picture-container',
+            imageElement: 'image-list-tool__image-picture',
             caption: 'image-list-tool__caption',
             sortable: 'image-list-tool__sortable',
             sortableCurrent: 'image-list-tool__sortable-current',
@@ -100,88 +100,82 @@ export default class Ui {
         return this.nodes.wrapper;
     }
 
-    renderItem(item) {
+    renderItem(item, hash, mode) {
         const {url} = item.file;
-        const imageContainer = make('div', [this.CSS.imageContainer]);
-        imageContainer.dataset.item = JSON.stringify(item);
-        const caption = make('div', [this.CSS.input, this.CSS.caption], {
-            contentEditable: !this.readOnly,
-            innerHTML: item.caption || '',
-        });
-        caption.dataset.placeholder = this.config.captionPlaceholder;
 
-        /**
-         * Check for a source extension to compose element correctly: video tag for mp4, img — for others
-         */
-        const tag = /\.mp4$/.test(url) ? 'VIDEO' : 'IMG';
+        let isImageContainerExist = false;
+        let imageContainer;
 
-        const attributes = {
-            src: url,
-        };
-
-        /**
-         * We use eventName variable because IMG and VIDEO tags have different event to be called on source load
-         * - IMG: load
-         * - VIDEO: loadeddata
-         *
-         * @type {string}
-         */
-        let eventName = 'load';
-
-        /**
-         * Update attributes and eventName if source is a mp4 video
-         */
-        if (tag === 'VIDEO') {
-            /**
-             * Add attributes for playing muted mp4 as a gif
-             *
-             * @type {boolean}
-             */
-            attributes.autoplay = true;
-            attributes.loop = true;
-            attributes.muted = true;
-            attributes.playsinline = true;
-
-            /**
-             * Change event to be listened
-             *
-             * @type {string}
-             */
-            eventName = 'loadeddata';
+        if (typeof hash !== undefined) {
+            imageContainer = this.nodes.wrapper.querySelector(`.${this.CSS.imageContainer}[data-hash='${hash}']`);
         }
 
-        const removeButton = make('div', [this.CSS.imageRemoveButton]);
-        removeButton.addEventListener('click', () => {
-            imageContainer.remove();
-        });
+        if (imageContainer) {
+            isImageContainerExist = true;
+        }
 
-        /**
-         * Compose tag with defined attributes
-         *
-         * @type {Element}
-         */
-        const imageEl = make(tag, this.CSS.imageEl, attributes);
+        if (!isImageContainerExist) {
+            imageContainer = make('div', [this.CSS.imageContainer]);
+            this.nodes.listContainer.appendChild(imageContainer);
+        }
 
-        /**
-         * Add load event listener
-         */
-        imageEl.addEventListener(eventName, () => {
-            this.toggleStatus(Ui.status.FILLED);
+        if (mode === 'preload' && typeof hash !== undefined) {
+            imageContainer.dataset.hash = hash;
+
+            const imagePreloader = make('div', this.CSS.imagePreloader);
+            imagePreloader.style.backgroundImage = `url(${url})`;
+
+            const imageElementContainer = make('div', [this.CSS.imageElementContainer]);
+            imageElementContainer.appendChild(imagePreloader);
+
+            imageContainer.append(imageElementContainer);
+
+        } else {
+            imageContainer.innerHTML = '';
+            imageContainer.dataset.hash = '-';
+            imageContainer.dataset.item = JSON.stringify(item);
+
+            const caption = make('div', [this.CSS.input, this.CSS.caption], {
+                contentEditable: !this.readOnly,
+                innerHTML: item.caption || '',
+            });
+            caption.dataset.placeholder = this.config.captionPlaceholder;
+
+            const attributes = {
+                src: url,
+            };
+
+            const removeButton = make('div', [this.CSS.imageRemoveButton]);
+            removeButton.addEventListener('click', () => {
+                imageContainer.remove();
+            });
 
             /**
-             * Preloader does not exists on first rendering with presaved data
+             * Compose tag with defined attributes
+             *
+             * @type {Element}
              */
-            if (this.nodes.imagePreloader) {
-                this.nodes.imagePreloader.style.backgroundImage = '';
-            }
-        });
+            const imageElement = make('img', this.CSS.imageElement, attributes);
 
-        imageContainer.appendChild(removeButton);
-        imageContainer.appendChild(imageEl);
-        imageContainer.appendChild(caption);
-        this.nodes.listContainer.appendChild(imageContainer);
+            /**
+             * Add load event listener
+             */
+            imageElement.addEventListener('load', () => {
+
+            });
+
+            const imageElementContainer = make('div', [this.CSS.imageElementContainer]);
+            imageElementContainer.appendChild(removeButton);
+            imageElementContainer.appendChild(imageElement);
+            imageContainer.appendChild(imageElementContainer);
+            imageContainer.appendChild(caption);
+        }
 
         this.initSorting(this.nodes.listContainer);
+    }
+
+    preloadItem(url, hash) {
+        this.renderItem({file: {url}}, hash, 'preload')
     }
 
     /**
@@ -205,12 +199,16 @@ export default class Ui {
      * Shows uploading preloader
      *
      * @param {string} src - preview source
+     * @param {string} hash - item hash
      * @returns {void}
      */
-    showPreloader(src) {
-        this.nodes.imagePreloader.style.backgroundImage = `url(${src})`;
-
-        this.toggleStatus(Ui.status.UPLOADING);
+    showPreloader(src, hash) {
+        this.renderItem({
+            caption: '',
+            file: {
+                url: src
+            }
+        }, hash);
     }
 
     /**
@@ -219,8 +217,6 @@ export default class Ui {
      * @returns {void}
      */
     hidePreloader() {
-        this.nodes.imagePreloader.style.backgroundImage = '';
-        this.toggleStatus(Ui.status.EMPTY);
     }
 
     /**
@@ -230,11 +226,12 @@ export default class Ui {
      * @returns {void}
      */
     toggleStatus(status) {
+        /*
         for (const statusType in Ui.status) {
             if (Object.prototype.hasOwnProperty.call(Ui.status, statusType)) {
                 this.nodes.wrapper.classList.toggle(`${this.CSS.wrapper}--${Ui.status[statusType]}`, status === Ui.status[statusType]);
             }
-        }
+        } */
     }
 
     /**
@@ -248,7 +245,8 @@ export default class Ui {
         this.nodes.wrapper.classList.toggle(`${this.CSS.wrapper}--${tuneName}`, status);
     }
 
-    initSorting(target) {
+    initSorting() {
+        const target = this.nodes.listContainer;
         // (A) SET CSS + GET ALL LIST ITEMS
         target.classList.add(this.CSS.sortable);
         let items = target.querySelectorAll(`.${this.CSS.imageContainer}`),
