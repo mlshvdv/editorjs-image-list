@@ -15,7 +15,7 @@
 const path = require('path');
 const http = require('http');
 const formidable = require('formidable');
-const { parse } = require('querystring');
+const {parse} = require('querystring');
 const fs = require('fs');
 const request = require('request');
 const crypto = require('crypto');
@@ -105,8 +105,10 @@ class ServerExample {
                 console.log('Uploading error', error);
             })
             .finally(() => {
-                response.writeHead(200, {'Content-Type': 'application/json'});
-                response.end(JSON.stringify(responseJson));
+                //setTimeout(() => {
+                    response.writeHead(200, {'Content-Type': 'application/json'});
+                    response.end(JSON.stringify(responseJson));
+                //}, 60000);
             });
     }
 

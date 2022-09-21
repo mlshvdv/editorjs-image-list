@@ -9,6 +9,10 @@
 
   &__list-container {
     overflow: hidden;
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 5px;
   }
 
   &__sortable {
@@ -16,8 +20,9 @@
     &-current,
     &-hint,
     &-active {
-      padding: 10px 20px;
-      margin: 0 !important;
+      .image-list-tool__image-picture {
+        opacity: 0.5;
+      }
     }
 
     &-current {
@@ -39,25 +44,38 @@
 
   &__image {
     position: relative;
+    padding: 0;
     border-radius: 3px;
     overflow: hidden;
-    transition: padding 0.3s ease, margin 0.3s ease;
+    cursor: move;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
 
     &:not(:last-child) {
-      margin-bottom: 20px;
+
     }
 
     * {
       pointer-events: none;
     }
 
+    &-picture-container {
+      position: relative;
+      display: flex;
+      max-width: 100%;
+      height: 140px;
+      border-radius: 3px;
+    }
+
     &__remove-button {
       display: block;
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 24px;
-      height: 24px;
+      top: 5px;
+      right: 5px;
+      width: 20px;
+      height: 20px;
       opacity: 0.7;
       cursor: pointer;
       pointer-events: auto;
@@ -71,8 +89,8 @@
 
       &:before, &:after {
         position: absolute;
-        top: 6px;
-        right: 12px;
+        top: 4px;
+        right: 10px;
         content: ' ';
         height: 12px;
         width: 1px;
@@ -91,9 +109,11 @@
     &-picture {
       border-radius: 3px;
       max-width: 100%;
-      vertical-align: bottom;
-      display: block;
+      max-height: 140px;
+      vertical-align: top;
+      display: flex;
       cursor: pointer;
+      transition: opacity 0.3s ease;
     }
 
     &-preloader {
@@ -123,11 +143,15 @@
         box-sizing: border-box;
       }
     }
+
   }
 
   &__caption {
-    margin-top: 10px;
+    margin-top: 5px;
+    padding: 5px;
+    font-size: 0.8rem;
     pointer-events: auto;
+    cursor: text;
 
     &[contentEditable="true"][data-placeholder]::before {
       position: absolute !important;
